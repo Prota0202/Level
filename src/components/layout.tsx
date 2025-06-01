@@ -1,7 +1,7 @@
-import { JSX, createAsync, query, createMemo } from 'solid-js';
+import { JSX, createMemo } from 'solid-js';
+import { createAsync, query, Navigate } from '@solidjs/router';
 import { getSession } from "@auth/solid-start";
 import { authOptions } from "~/routes/api/auth/[...solidauth]";
-import { Navigate } from '@solidjs/router';
 import { Show } from 'solid-js';
 import MobileSidebar from './mobile-sidebar';
 import DesktopSidebar from './desktop-sidebar';

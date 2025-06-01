@@ -166,7 +166,7 @@ export default function DashboardLayout() {
   return (
     <Layout>
       <div class="container mx-auto h-full px-4 py-8">
-        <Show
+        <
           when={character() && attributes()}
           fallback={
             <Show
@@ -187,7 +187,7 @@ export default function DashboardLayout() {
               {/* Je ne répète pas tout le JSX pour économiser de l'espace, mais il reste identique */}
             </div>
           )}
-        </Show>
+        </>
       </div>
     </Layout>
   );

@@ -1,4 +1,3 @@
-// src/components/AttributeBar.tsx
 import { cn } from "~/lib/utils";
 import { Component, createMemo } from "solid-js";
 
@@ -20,7 +19,12 @@ export const AttributeBar: Component<IProps> = (props) => {
 
   return (
     <div class="flex items-center">
-      <div class={cn("w-10 h-10 rounded-full flex items-center justify-center mr-3", props.iconBg)}>
+      <div
+        class={cn(
+          "w-10 h-10 rounded-full flex items-center justify-center mr-3",
+          props.iconBg
+        )}
+      >
         <svg class={cn("h-6 w-6", props.iconColor)} viewBox="0 0 20 20" fill="currentColor">
           <path
             fill-rule="evenodd"

@@ -1,9 +1,11 @@
-// routes/create-quest.tsx
-import { action, redirect, useSubmission } from "@solidjs/router";
-import { createSignal, onMount, Show } from "solid-js";
+import { action, redirect, useSubmission, createAsync, query } from "@solidjs/router";
+import { createSignal, Show } from "solid-js";
+import { getSession } from "@auth/solid-start";
+import { authOptions } from "~/routes/api/auth/[...solidauth]";
 import { For } from "solid-js/web";
 import { ErrorAlert } from "~/components/error-alert";
 import Layout from "~/components/layout";
+import LoadingSpinner from "~/components/loading";
 import { availableItems } from "~/constants/dummy";
 import db from "~/lib/db";
 import { getExpReward } from "~/lib/utils";
@@ -15,6 +17,20 @@ type RewardItem = {
   description: string;
   quantity: number;
 };
+
+// Query pour récupérer l'email de l'utilisateur
+export const getCreateQuestData = query(async () => {
+  "use server";
+  
+  const session = await getSession(authOptions);
+  if (!session?.user) {
+    throw new Error("Non autorisé");
+  }
+
+  return {
+    userEmail: session.user.email!
+  };
+}, "createQuest");
 
 const createQuest = action(async (
   userEmail: string,
@@ -85,18 +101,12 @@ const createQuest = action(async (
 }, "createQuest");
 
 export default function CreateQuestLayout() {
+  const questData = createAsync(() => getCreateQuestData());
   const [rewards, setRewards] = createSignal<RewardItem[]>([
     { id: 1, itemName: '', description: '', quantity: 1 }
   ]);
 
   const submission = useSubmission(createQuest);
-  const [userEmail, setUserEmail] = createSignal('');
-
-  onMount(async () => {
-    const res = await fetch('/api/auth/session');
-    const data = await res.json();
-    setUserEmail(data?.user.email || '');
-  });
 
   const handleRewardChange = (index: number, field: keyof RewardItem, value: string) => {
     const updated = [...rewards()];
@@ -136,163 +146,176 @@ export default function CreateQuestLayout() {
       <div class="container mx-auto px-4 py-8">
         <h1 class="text-3xl font-bold text-center text-blue-400 mb-8">Create New Quest</h1>
 
-        <div class="max-w-2xl mx-auto bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-          <div class="p-6">
-            <form action={createQuest.with(userEmail(), rewards())} method="post">
-              <div class="mb-8">
-                <h2 class="text-xl font-bold text-gray-200 mb-6">Quest Information</h2>
-
-                <div class="grid grid-cols-1 gap-6">
-                  <div>
-                    <label for="title" class="block text-sm font-medium text-gray-300 mb-2">
-                      Quest Title <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="title"
-                      name="title"
-                      required
-                      class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter quest title"
-                    />
-                  </div>
-
-                  <div>
-                    <label for="description" class="block text-sm font-medium text-gray-300 mb-2">
-                      Quest Description
-                    </label>
-                    <textarea
-                      id="description"
-                      name="description"
-                      rows={4}
-                      class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter quest description"
-                    ></textarea>
-                  </div>
-
-                  <div>
-                    <label for="difficulty" class="block text-sm font-medium text-gray-300 mb-2">
-                      Difficulty Level <span class="text-red-500">*</span>
-                    </label>
-                    <select
-                      id="difficulty"
-                      name="difficulty"
-                      class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    >
-                      <option value="" selected disabled>Select a difficulty</option>
-                      <option value="A">A (Hardest) - 1000 XP</option>
-                      <option value="B">B (Hard) - 500 XP</option>
-                      <option value="C">C (Medium) - 300 XP</option>
-                      <option value="D">D (Easy) - 150 XP</option>
-                      <option value="E">E (Easiest) - 50 XP</option>
-                    </select>
-                  </div>
-                </div>
+        <Show
+          when={questData()}
+          fallback={
+            <div class="max-w-2xl mx-auto bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+              <div class="p-6">
+                <LoadingSpinner size="medium" message="Loading..." />
               </div>
+            </div>
+          }
+        >
+          {(data) => (
+            <div class="max-w-2xl mx-auto bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+              <div class="p-6">
+                <form action={createQuest.with(data().userEmail, rewards())} method="post">
+                  <div class="mb-8">
+                    <h2 class="text-xl font-bold text-gray-200 mb-6">Quest Information</h2>
 
-              <div class="mb-8">
-                <div class="flex justify-between items-center mb-6">
-                  <h2 class="text-xl font-bold text-gray-200">Reward Items</h2>
-                  <button
-                    type="button"
-                    onClick={addReward}
-                    class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium"
-                  >
-                    + Add Item
-                  </button>
-                </div>
+                    <div class="grid grid-cols-1 gap-6">
+                      <div>
+                        <label for="title" class="block text-sm font-medium text-gray-300 mb-2">
+                          Quest Title <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          id="title"
+                          name="title"
+                          required
+                          class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Enter quest title"
+                        />
+                      </div>
 
-                <div class="space-y-6">
-                  <For each={rewards()}>
-                    {(reward, index) => (
-                      <div class="p-4 bg-gray-750 rounded-lg border border-gray-700">
-                        <div class="flex justify-between items-center mb-4">
-                          <h3 class="font-medium text-gray-200">Reward Item #{index() + 1}</h3>
-                          <button
-                            type="button"
-                            onClick={() => removeReward(index())}
-                            class="text-red-400 hover:text-red-300"
-                            disabled={rewards().length === 1}
-                          >
-                            {rewards().length > 1 ? 'Remove' : ''}
-                          </button>
-                        </div>
+                      <div>
+                        <label for="description" class="block text-sm font-medium text-gray-300 mb-2">
+                          Quest Description
+                        </label>
+                        <textarea
+                          id="description"
+                          name="description"
+                          rows={4}
+                          class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Enter quest description"
+                        ></textarea>
+                      </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div class="md:col-span-2">
-                            <label for={`itemName-${index()}`} class="block text-sm font-medium text-gray-300 mb-2">
-                              Item Name <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                              id={`itemName-${index()}`}
-                              value={reward.itemName}
-                              onChange={(e) => handleRewardChange(index(), 'itemName', e.currentTarget.value)}
-                              required
-                              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                              <option value="">Select Item</option>
-                              <For each={availableItems}>
-                                {(item) => <option value={item.name}>{item.name}</option>}
-                              </For>
-                            </select>
-                          </div>
+                      <div>
+                        <label for="difficulty" class="block text-sm font-medium text-gray-300 mb-2">
+                          Difficulty Level <span class="text-red-500">*</span>
+                        </label>
+                        <select
+                          id="difficulty"
+                          name="difficulty"
+                          class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          required
+                        >
+                          <option value="" selected disabled>Select a difficulty</option>
+                          <option value="A">A (Hardest) - 1000 XP</option>
+                          <option value="B">B (Hard) - 500 XP</option>
+                          <option value="C">C (Medium) - 300 XP</option>
+                          <option value="D">D (Easy) - 150 XP</option>
+                          <option value="E">E (Easiest) - 50 XP</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
 
-                          <div>
-                            <label for={`quantity-${index()}`} class="block text-sm font-medium text-gray-300 mb-2">
-                              Quantity <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="number"
-                              id={`quantity-${index()}`}
-                              value={reward.quantity}
-                              onInput={(e) => handleRewardChange(index(), 'quantity', e.currentTarget.value)}
-                              min={1}
-                              required
-                              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-                        </div>
+                  <div class="mb-8">
+                    <div class="flex justify-between items-center mb-6">
+                      <h2 class="text-xl font-bold text-gray-200">Reward Items</h2>
+                      <button
+                        type="button"
+                        onClick={addReward}
+                        class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium"
+                      >
+                        + Add Item
+                      </button>
+                    </div>
 
-                        {reward.description && (
-                          <div class="mt-4">
-                            <p class="text-sm text-gray-400">
-                              <span class="font-medium">Description:</span> {reward.description}
-                            </p>
+                    <div class="space-y-6">
+                      <For each={rewards()}>
+                        {(reward, index) => (
+                          <div class="p-4 bg-gray-750 rounded-lg border border-gray-700">
+                            <div class="flex justify-between items-center mb-4">
+                              <h3 class="font-medium text-gray-200">Reward Item #{index() + 1}</h3>
+                              <button
+                                type="button"
+                                onClick={() => removeReward(index())}
+                                class="text-red-400 hover:text-red-300"
+                                disabled={rewards().length === 1}
+                              >
+                                {rewards().length > 1 ? 'Remove' : ''}
+                              </button>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div class="md:col-span-2">
+                                <label for={`itemName-${index()}`} class="block text-sm font-medium text-gray-300 mb-2">
+                                  Item Name <span class="text-red-500">*</span>
+                                </label>
+                                <select
+                                  id={`itemName-${index()}`}
+                                  value={reward.itemName}
+                                  onChange={(e) => handleRewardChange(index(), 'itemName', e.currentTarget.value)}
+                                  required
+                                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                  <option value="">Select Item</option>
+                                  <For each={availableItems}>
+                                    {(item) => <option value={item.name}>{item.name}</option>}
+                                  </For>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label for={`quantity-${index()}`} class="block text-sm font-medium text-gray-300 mb-2">
+                                  Quantity <span class="text-red-500">*</span>
+                                </label>
+                                <input
+                                  type="number"
+                                  id={`quantity-${index()}`}
+                                  value={reward.quantity}
+                                  onInput={(e) => handleRewardChange(index(), 'quantity', e.currentTarget.value)}
+                                  min={1}
+                                  required
+                                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                            </div>
+
+                            {reward.description && (
+                              <div class="mt-4">
+                                <p class="text-sm text-gray-400">
+                                  <span class="font-medium">Description:</span> {reward.description}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         )}
-                      </div>
-                    )}
-                  </For>
-                </div>
-              </div>
+                      </For>
+                    </div>
+                  </div>
 
-              <Show when={submission.error || submission.result?.error}>
-                <ErrorAlert
-                  message={submission.error?.message || submission.result?.error}
-                />
-              </Show>
+                  <Show when={submission.error || submission.result?.error}>
+                    <ErrorAlert
+                      message={submission.error?.message || submission.result?.error}
+                    />
+                  </Show>
 
-              <div class="mt-4 flex justify-end pt-4 border-t border-gray-700">
-                <button
-                  type="button"
-                  class="px-4 py-2 bg-gray-700 text-gray-300 rounded-md mr-3 hover:bg-gray-600"
-                  onClick={() => history.back()}
-                  disabled={submission.pending}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                  disabled={submission.pending || !userEmail}
-                >
-                  {submission.pending ? 'Loading...' : 'Create Quest'}
-                </button>
+                  <div class="mt-4 flex justify-end pt-4 border-t border-gray-700">
+                    <button
+                      type="button"
+                      class="px-4 py-2 bg-gray-700 text-gray-300 rounded-md mr-3 hover:bg-gray-600"
+                      onClick={() => history.back()}
+                      disabled={submission.pending}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                      disabled={submission.pending}
+                    >
+                      {submission.pending ? 'Loading...' : 'Create Quest'}
+                    </button>
+                  </div>
+                </form>
               </div>
-            </form>
-          </div>
-        </div>
+            </div>
+          )}
+        </Show>
       </div>
     </Layout>
   );

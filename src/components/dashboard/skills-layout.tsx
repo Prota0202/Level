@@ -1,6 +1,8 @@
-import { A, action, useAction, useNavigate, useSearchParams } from '@solidjs/router';
-import { createSignal, onMount } from 'solid-js';
-import { For, Show } from 'solid-js/web';
+import { A, action, useAction, useNavigate, useSearchParams, createAsync, query } from '@solidjs/router';
+import { createSignal, Show } from 'solid-js';
+import { getSession } from "@auth/solid-start";
+import { authOptions } from "~/routes/api/auth/[...solidauth]";
+import { For, Show as SolidShow } from 'solid-js/web';
 import { updateCharacterExpAndLevel } from '~/actions/update-character-exp-and-level';
 import Layout from '~/components/layout';
 import LoadingSpinner from '~/components/loading';
@@ -8,6 +10,39 @@ import { SuccessAlert } from '~/components/success-alert';
 import { useToast } from '~/components/toast/toast';
 import db from '~/lib/db';
 import { Skill } from '~/lib/types';
+
+// Query pour récupérer les skills
+export const getSkillsData = query(async () => {
+  "use server";
+  
+  const session = await getSession(authOptions);
+  if (!session?.user) {
+    throw new Error("Non autorisé");
+  }
+
+  const user = await db.user.findUnique({
+    where: { email: session.user.email! },
+    select: {
+      character: {
+        select: { id: true }
+      }
+    }
+  });
+
+  if (!user) {
+    throw new Error("Utilisateur non trouvé");
+  }
+
+  if (!user.character) {
+    throw new Error("Personnage non trouvé");
+  }
+
+  const skills = await db.skill.findMany({
+    where: { characterId: user.character.id },
+  });
+
+  return skills as Skill[];
+}, "skills");
 
 const removeSkill = action(async (skillId: number) => {
   "use server";
@@ -75,7 +110,7 @@ const upgradeSkill = action(async (skillId: number) => {
 }, "upgradeSkill");
 
 export default function SkillsLayout() {
-  const [isLoading, setIsLoading] = createSignal(true);
+  const skillsData = createAsync(() => getSkillsData());
   const [selectedSkill, setSelectedSkill] = createSignal<Skill | null>(null);
   const [skills, setSkills] = createSignal<Skill[]>([]);
   const [refetchCharacter, setRefetchCharacter] = createSignal<() => Promise<void>>();
@@ -83,31 +118,13 @@ export default function SkillsLayout() {
   const removeSkillAction = useAction(removeSkill);
   const upgradeSkillAction = useAction(upgradeSkill);
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const toast = useToast();
 
-  onMount(async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch(`/api/skills`);
-
-      switch (res.status) {
-        case 200:
-          const data = await res.json();
-          setSkills(data);
-          break;
-        case 404:
-          navigate('/404');
-          break;
-        default:
-          const errorData = await res.json();
-          throw Error(errorData?.error || 'Internal server error');
-      }
-    } catch (error) {
-      console.log({ error });
-      navigate('/500');
-    } finally {
-      setIsLoading(false);
+  // Initialiser les skills quand les données sont chargées
+  createMemo(() => {
+    const data = skillsData();
+    if (data) {
+      setSkills(data);
     }
   });
 
@@ -277,7 +294,7 @@ export default function SkillsLayout() {
                 </div>
               </Show>
               <Show
-                when={!isLoading()}
+                when={skillsData()}
                 fallback={(
                   <div class="py-10">
                     <LoadingSpinner size="medium" />

@@ -1,56 +1,81 @@
-import { Accessor, createSignal, JSX, onMount } from 'solid-js';
+import { Accessor, createSignal, JSX, createAsync, query, createMemo } from 'solid-js';
+import { getSession } from "@auth/solid-start";
+import { authOptions } from "~/routes/api/auth/[...solidauth]";
+import { Navigate } from '@solidjs/router';
 import MobileSidebar from './mobile-sidebar';
 import DesktopSidebar from './desktop-sidebar';
 import { CharacterSidebar } from '~/lib/types';
-import { useNavigate } from '@solidjs/router';
+import db from '~/lib/db';
 
 interface IProps {
   children: JSX.Element;
   onCharacterReady?: (refetch: () => Promise<void>) => void;
 }
 
-export default function Layout({ children, onCharacterReady }: IProps) {
-  const [character, setCharacter] = createSignal<CharacterSidebar | null>(null);
-  const navigate = useNavigate();
+// Query pour récupérer les données du layout
+export const getLayoutData = query(async () => {
+  "use server";
+  
+  const session = await getSession(authOptions);
+  if (!session?.user) {
+    throw new Error("Non autorisé");
+  }
 
-  const fetchCharacter = async () => {
-    try {
-      const res = await fetch(`/api/sidebar`);
+  const user = await db.user.findUnique({
+    where: { email: session.user.email! }
+  });
 
-      switch (res.status) {
-        case 200:
-          const data = await res.json();
-          setCharacter(data);
-          break;
-        case 404:
-          navigate('/404');
-          break;
-        default:
-          const errorData = await res.json();
-          throw Error(errorData?.error || 'Internal server error');
-      }
-    } catch (error) {
-      console.error({ error });
-      navigate('/500');
+  if (!user) {
+    throw new Error("Utilisateur non trouvé");
+  }
+
+  const character = await db.character.findUnique({
+    where: { userId: user.id },
+    select: {
+      name: true,
+      class: true,
+      level: true,
+      user: { select: { name: true } }
     }
-  };
+  });
 
-  onMount(() => {
-    fetchCharacter();
+  if (!character) {
+    throw new Error("Personnage non trouvé");
+  }
 
-    // Expose refetch function ke parent
+  return {
+    userName: character.user.name!,
+    name: character.name,
+    class: character.class,
+    level: character.level
+  } as CharacterSidebar;
+}, "layout");
+
+export default function Layout({ children, onCharacterReady }: IProps) {
+  const characterData = createAsync(() => getLayoutData());
+  
+  // Expose refetch function to parent
+  createMemo(() => {
     if (onCharacterReady) {
-      onCharacterReady(fetchCharacter);
+      onCharacterReady(async () => {
+        // Force refetch of layout data
+        await getLayoutData();
+      });
     }
   });
 
   return (
     <div class="min-h-screen bg-gray-900 text-gray-100 flex">
-      <DesktopSidebar character={character} />
-      <MobileSidebar character={character} />
+      <DesktopSidebar character={characterData} />
+      <MobileSidebar character={characterData} />
 
       <main class="md:ml-64 flex-1 py-6 md:py-12 min-h-screen pt-20 md:pt-0 overflow-hidden">
-        {children}
+        <Show
+          when={!characterData.error}
+          fallback={<Navigate href="/character/create" />}
+        >
+          {children}
+        </Show>
       </main>
     </div>
   );

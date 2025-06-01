@@ -1,17 +1,63 @@
-// src/routes/quest.tsx
-import { A, action, useAction, useNavigate, useSearchParams } from "@solidjs/router";
-import { createSignal, onMount } from "solid-js";
-import { For, Show } from "solid-js/web";
-import Layout from "~/components/layout"; // Adjust path as needed
+import { createAsync, query, action, useAction } from "@solidjs/router";
+import { getSession } from "@auth/solid-start";
+import { authOptions } from "~/routes/api/auth/[...solidauth]";
+import db from "~/lib/db";
+import { createSignal, Show } from "solid-js";
+import { For } from "solid-js/web";
+import Layout, { getLayoutData } from "~/components/layout";
 import LoadingSpinner from "~/components/loading";
 import { SuccessAlert } from "~/components/success-alert";
 import { questTabs } from "~/constants/dummy";
 import { Quest, QuestStatus } from "~/lib/types";
-import { cn, getExpReward } from "~/lib/utils"; // You can reuse the utility function
+import { cn, getExpReward } from "~/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
-import db from "~/lib/db";
 import { useToast } from "~/components/toast/toast";
 import { updateCharacterExpAndLevel } from "~/actions/update-character-exp-and-level";
+import { useSearchParams } from "@solidjs/router";
+
+// Query serveur pour récupérer les quêtes
+export const getQuestsData = query(async () => {
+  "use server";
+  
+  const session = await getSession(authOptions);
+  if (!session?.user) {
+    throw new Error("Non autorisé");
+  }
+
+  const user = await db.user.findUnique({
+    where: { email: session.user.email! },
+    select: {
+      character: {
+        select: { id: true }
+      }
+    }
+  });
+
+  if (!user) {
+    throw new Error("Utilisateur non trouvé");
+  }
+
+  if (!user.character) {
+    throw new Error("Personnage non trouvé");
+  }
+
+  const quests = await db.quest.findMany({
+    where: { characterId: user.character.id },
+  });
+
+  const grouped = {
+    AVAILABLE: [] as Quest[],
+    IN_PROGRESS: [] as Quest[],
+    COMPLETED: [] as Quest[],
+    FAILED: [] as Quest[],
+  };
+
+  for (const quest of quests) {
+    grouped[quest.status].push(quest);
+  }
+
+  return grouped;
+}, "quests");
 
 type UpdateAction = 'accept' | 'progress' | 'cancel';
 
@@ -24,12 +70,12 @@ const updateQuest = action(async (questId: number, type: UpdateAction) => {
     });
 
     if (!quest) {
-      return { error: "Quest not found." };
+      return { error: "Quête non trouvée." };
     }
 
     if (type === 'accept') {
       if (quest.status !== 'AVAILABLE') {
-        return { error: "Quest must be AVAILABLE to accept." };
+        return { error: "La quête doit être DISPONIBLE pour être acceptée." };
       }
 
       const updatedQuest = await db.quest.update({
@@ -41,7 +87,7 @@ const updateQuest = action(async (questId: number, type: UpdateAction) => {
       });
 
       return {
-        success: ["Quest accepted."],
+        success: ["Quête acceptée."],
         type: "accepted" as const,
         data: updatedQuest
       };
@@ -49,7 +95,7 @@ const updateQuest = action(async (questId: number, type: UpdateAction) => {
 
     if (type === 'progress') {
       if (quest.status !== 'IN_PROGRESS') {
-        return { error: "Quest must be IN_PROGRESS to update progress." };
+        return { error: "La quête doit être EN COURS pour mettre à jour le progrès." };
       }
 
       const nextProgress = quest.progress + 25;
@@ -81,7 +127,6 @@ const updateQuest = action(async (questId: number, type: UpdateAction) => {
         const gainedExp = getExpReward(data.difficulty);
 
         for (const rewardItem of itemsRewarded) {
-          // 2. Cek apakah karakter sudah punya item yang sama (berdasarkan name)
           const existingItem = await db.item.findFirst({
             where: {
               characterId: updatedQuest.characterId,
@@ -91,7 +136,6 @@ const updateQuest = action(async (questId: number, type: UpdateAction) => {
           });
 
           if (existingItem) {
-            // 3a. Jika sudah ada, tambahkan quantity
             await db.item.update({
               where: { id: existingItem.id },
               data: {
@@ -105,7 +149,6 @@ const updateQuest = action(async (questId: number, type: UpdateAction) => {
               where: { id: rewardItem.id },
             });
           } else {
-            // 3b. Jika belum ada, buat item baru
             await db.item.updateMany({
               where: {
                 characterId: updatedQuest.characterId,
@@ -123,24 +166,24 @@ const updateQuest = action(async (questId: number, type: UpdateAction) => {
         });
 
         if (leveledUp) {
-          const levelUpMessage = `🎉 Level Up! ${updatedCharacter.name} has reached level ${updatedCharacter.level} and gained 5 attribute points!`;
+          const levelUpMessage = `🎉 Level Up! ${updatedCharacter.name} a atteint le niveau ${updatedCharacter.level} et gagné 5 points d'attributs !`;
 
           return {
-            success: [`Quest completed. You got ${data.reward}`, levelUpMessage],
+            success: [`Quête terminée. Vous avez reçu ${data.reward}`, levelUpMessage],
             type: resultType,
             data: data
           };
         }
 
         return {
-          success: ["Progress completed."],
+          success: ["Progrès terminé."],
           type: resultType,
           data: data
         };
       }
 
       return {
-        success: ["Progress updated."],
+        success: ["Progrès mis à jour."],
         type: resultType,
         data: updatedQuest
       };
@@ -148,7 +191,7 @@ const updateQuest = action(async (questId: number, type: UpdateAction) => {
 
     if (type === 'cancel') {
       if (quest.status !== 'IN_PROGRESS') {
-        return { error: "Only IN_PROGRESS quests can be cancelled." };
+        return { error: "Seules les quêtes EN COURS peuvent être annulées." };
       }
 
       const updatedQuest = await db.quest.update({
@@ -156,7 +199,7 @@ const updateQuest = action(async (questId: number, type: UpdateAction) => {
         data: {
           status: 'FAILED',
           failedDate: new Date(),
-          reason: "Cancelled by player",
+          reason: "Annulée par le joueur",
         },
         include: { itemsRewarded: true }
       });
@@ -174,24 +217,26 @@ const updateQuest = action(async (questId: number, type: UpdateAction) => {
       }
 
       return {
-        success: ["Quest has been cancelled."],
+        success: ["La quête a été annulée."],
         type: "failed" as const,
         data: data
       };
     }
 
-    return { error: "Invalid action type." };
+    return { error: "Type d'action invalide." };
 
   } catch (err) {
     console.error(err);
-    return { error: "An unexpected error occurred. Please try again." };
+    return { error: "Une erreur inattendue s'est produite. Veuillez réessayer." };
   }
 }, "updateQuest");
 
 export default function QuestsLayout() {
   const [activeTab, setActiveTab] = createSignal<QuestStatus>('AVAILABLE');
-  const [isLoading, setIsLoading] = createSignal(true);
-  const [refetchCharacter, setRefetchCharacter] = createSignal<() => Promise<void>>();
+  const questsData = createAsync(() => getQuestsData());
+  const [searchParams] = useSearchParams();
+  const toast = useToast();
+  
   const [quests, setQuests] = createSignal<Record<QuestStatus, Quest[]>>({
     AVAILABLE: [],
     COMPLETED: [],
@@ -199,53 +244,33 @@ export default function QuestsLayout() {
     IN_PROGRESS: []
   });
 
-  const updateQuestAction = useAction(updateQuest);
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const toast = useToast();
-
-  onMount(async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch(`/api/quests`);
-
-      switch (res.status) {
-        case 200:
-          const data = await res.json();
-          setQuests(data);
-          break;
-        case 404:
-          navigate('/404');
-          break;
-        default:
-          const errorData = await res.json();
-          throw Error(errorData?.error || 'Internal server error');
-      }
-    } catch (error) {
-      console.log({ error });
-      navigate('/500');
-    } finally {
-      setIsLoading(false);
+  // Initialiser les quêtes quand les données sont chargées
+  createMemo(() => {
+    const data = questsData();
+    if (data) {
+      setQuests(data);
     }
   });
 
+  const updateQuestAction = useAction(updateQuest);
+
   return (
-    <Layout onCharacterReady={(refetch) => setRefetchCharacter(() => refetch)}>
+    <Layout>
       <div class="container mx-auto h-full flex flex-col px-4 py-8">
-        <h1 class="text-3xl font-bold text-center text-blue-400 mb-8">Quest Board</h1>
+        <h1 class="text-3xl font-bold text-center text-blue-400 mb-8">Tableau des quêtes</h1>
 
         <Show
-          when={!isLoading()}
-          fallback={(
+          when={questsData()}
+          fallback={
             <div class="flex-1 flex justify-center items-center">
-              <LoadingSpinner size="large" message="Please wait..." />
+              <LoadingSpinner size="large" message="Veuillez patienter..." />
             </div>
-          )}
+          }
         >
           <div class="mb-4">
             <A href="/quest/create">
               <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium">
-                Create Quest
+                Créer une quête
               </button>
             </A>
           </div>
@@ -279,7 +304,7 @@ export default function QuestsLayout() {
           <Show when={searchParams.create_quest === 'success'}>
             <div class="mb-4">
               <SuccessAlert
-                message="Great, new quest created🔥"
+                message="Super, nouvelle quête créée 🔥"
               />
             </div>
           </Show>
@@ -306,7 +331,7 @@ export default function QuestsLayout() {
                           'bg-purple-900 text-purple-300': quest.difficulty === 'B',
                           'bg-red-900 text-red-300': quest.difficulty === 'A',
                         })}>
-                          Rank {quest.difficulty}
+                          Rang {quest.difficulty}
                         </span>
                       </div>
                       <p class="text-sm text-gray-400 mb-4">{quest.description}</p>
@@ -314,7 +339,7 @@ export default function QuestsLayout() {
                       <Show when={activeTab() === 'IN_PROGRESS'}>
                         <div class="mb-4">
                           <div class="flex justify-between text-xs text-gray-400 mb-1">
-                            <span>Progress</span>
+                            <span>Progrès</span>
                             <span>{quest.progress}%</span>
                           </div>
                           <div class="w-full bg-gray-700 rounded-full h-2">
@@ -325,18 +350,18 @@ export default function QuestsLayout() {
 
                       <div class="flex flex-wrap gap-2 mb-4">
                         <div class="bg-gray-700 rounded-lg px-3 py-1 text-xs text-gray-300">
-                          <span class="font-bold text-blue-400 mr-1">Reward:</span> {quest.reward}
+                          <span class="font-bold text-blue-400 mr-1">Récompense :</span> {quest.reward}
                         </div>
                         <Show when={quest.completedDate}>
                           <div class="bg-gray-700 rounded-lg px-3 py-1 text-xs text-gray-300">
-                            <span class="font-bold text-green-400 mr-1">Completed:</span>
+                            <span class="font-bold text-green-400 mr-1">Terminée :</span>
                             {formatDistanceToNow(new Date(quest.completedDate!), { addSuffix: true })}
                           </div>
                         </Show>
 
                         <Show when={quest.failedDate}>
                           <div class="bg-gray-700 rounded-lg px-3 py-1 text-xs text-gray-300">
-                            <span class="font-bold text-red-400 mr-1">Failed:</span>
+                            <span class="font-bold text-red-400 mr-1">Échouée :</span>
                             {formatDistanceToNow(new Date(quest.failedDate!), { addSuffix: true })}
                           </div>
                         </Show>
@@ -347,7 +372,7 @@ export default function QuestsLayout() {
                       <Show when={activeTab() === 'AVAILABLE'}>
                         <button
                           class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium"
-                          onclick={async () => {
+                          onClick={async () => {
                             const res = await updateQuestAction(quest.id, 'accept');
                             if (res.success && res.data) {
                               setQuests((prev) => ({
@@ -356,12 +381,14 @@ export default function QuestsLayout() {
                                 IN_PROGRESS: [...prev.IN_PROGRESS, res.data]
                               }));
                               toast.success(res.success[0]);
+                              // Forcer le rafraîchissement des données du layout
+                              await getLayoutData();
                             } else if (res.error) {
                               toast.error(res.error);
                             }
                           }}
                         >
-                          Accept Quest
+                          Accepter la quête
                         </button>
                       </Show>
 
@@ -369,7 +396,7 @@ export default function QuestsLayout() {
                         <div class="flex gap-2">
                           <button
                             class="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium"
-                            onclick={async () => {
+                            onClick={async () => {
                               const res = await updateQuestAction(quest.id, 'progress');
                               if (res.success && res.data) {
                                 if (res.type === 'inProgress') {
@@ -390,10 +417,9 @@ export default function QuestsLayout() {
 
                                   res.success.forEach(async (message, index) => {
                                     if (index === 1) {
-                                      toast.levelUp(message)
-                                      if (refetchCharacter()) {
-                                        await refetchCharacter()!();
-                                      }
+                                      toast.levelUp(message);
+                                      // Forcer le rafraîchissement des données du layout
+                                      await getLayoutData();
                                     } else toast.success(message);
                                     await new Promise(resolve => setTimeout(resolve, 500));
                                   });
@@ -403,11 +429,11 @@ export default function QuestsLayout() {
                               }
                             }}
                           >
-                            Update Progress
+                            Mettre à jour le progrès
                           </button>
                           <button
                             class="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md font-medium"
-                            onclick={async () => {
+                            onClick={async () => {
                               const res = await updateQuestAction(quest.id, 'cancel');
                               if (res.success && res.data) {
                                 setQuests((prev) => ({
@@ -421,14 +447,14 @@ export default function QuestsLayout() {
                               }
                             }}
                           >
-                            Cancel
+                            Annuler
                           </button>
                         </div>
                       </Show>
 
                       <Show when={quest.reason}>
                         <div class="p-3 border border-red-700 bg-red-900/30 rounded-lg text-sm text-red-300">
-                          <p class="font-semibold">Reason for Failure:</p>
+                          <p class="font-semibold">Raison de l'échec :</p>
                           <p>{quest.reason}</p>
                         </div>
                       </Show>
@@ -440,7 +466,7 @@ export default function QuestsLayout() {
 
             <Show when={quests()[activeTab()].length === 0}>
               <div class="col-span-full text-center text-gray-400 py-12">
-                <p class="text-lg font-medium">No quests currently in this category.</p>
+                <p class="text-lg font-medium">Aucune quête dans cette catégorie.</p>
               </div>
             </Show>
           </div>

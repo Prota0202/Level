@@ -1,4 +1,4 @@
-import { createAsync, query, Navigate } from "@solidjs/router";
+import { createAsync, query } from "@solidjs/router";
 import { getSession } from "@auth/solid-start";
 import { authOptions } from "~/routes/api/auth/[...solidauth]";
 import db from "~/lib/db";

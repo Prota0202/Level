@@ -1,8 +1,8 @@
-import { A, action, useAction, useNavigate, useSearchParams, createAsync, query } from '@solidjs/router';
-import { createSignal, Show } from 'solid-js';
+import { A, action, useAction, useSearchParams, createAsync, query } from '@solidjs/router';
+import { createSignal, Show, createMemo } from 'solid-js';
 import { getSession } from "@auth/solid-start";
 import { authOptions } from "~/routes/api/auth/[...solidauth]";
-import { For, Show as SolidShow } from 'solid-js/web';
+import { For } from 'solid-js/web';
 import { updateCharacterExpAndLevel } from '~/actions/update-character-exp-and-level';
 import Layout from '~/components/layout';
 import LoadingSpinner from '~/components/loading';

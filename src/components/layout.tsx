@@ -1,7 +1,8 @@
-import { Accessor, createSignal, JSX, createAsync, query, createMemo } from 'solid-js';
+import { JSX, createAsync, query, createMemo } from 'solid-js';
 import { getSession } from "@auth/solid-start";
 import { authOptions } from "~/routes/api/auth/[...solidauth]";
 import { Navigate } from '@solidjs/router';
+import { Show } from 'solid-js';
 import MobileSidebar from './mobile-sidebar';
 import DesktopSidebar from './desktop-sidebar';
 import { CharacterSidebar } from '~/lib/types';

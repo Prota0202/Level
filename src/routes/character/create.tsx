@@ -8,18 +8,16 @@ import LoadingSpinner from "~/components/loading";
 import db from "~/lib/db";
 import { cn } from "~/lib/utils";
 import { characterSchema } from "~/lib/validation";
-// Removed unused imports from "~/lib/route-data"
 import { getRequestEvent } from "solid-js/web";
 
 // Query pour vérifier le statut du personnage
-export const getCreateCharacterData = query(async () => {
+const getCreateCharacterData = query(async () => {
   "use server";
 
   const event = getRequestEvent();
-    if (!event) throw new Error("No request event");
-    
+  if (!event) throw new Error("No request event");
   
-  const session = await getSession(event.request,authOptions);
+  const session = await getSession(event.request, authOptions);
   if (!session?.user) {
     throw new Error("Non autorisé");
   }
@@ -44,7 +42,7 @@ export const getCreateCharacterData = query(async () => {
   return {
     userId: user.id,
   };
-}, "createCharacter");
+}, "createCharacterData");
 
 const createCharacter = action(
   async (userId: number, remainingPoints: number, formData: FormData) => {
@@ -115,210 +113,209 @@ export default function CreateCharacterLayout() {
   };
 
   return (
-    <div class="bg-gray-900">
-        <Show
-          when={(() => {
-            try {
-              return characterData();
-            } catch (e: any) {
-              if (e instanceof Error && e.message === "Personnage existe déjà") {
-                return null;
-              }
-              throw e;
+    <div class="bg-gray-900 min-h-screen container mx-auto px-4 py-8 flex flex-col items-center justify-center">
+      <Show
+        when={(() => {
+          try {
+            return characterData();
+          } catch (e: any) {
+            if (e instanceof Error && e.message === "Personnage existe déjà") {
+              return null;
             }
-          })()}
-          fallback={
-            <Show
-              when={(() => {
-                try {
-                  characterData();
-                  return false;
-                } catch (e: any) {
-                  return e instanceof Error && e.message === "Personnage existe déjà";
-                }
-              })()}
-              fallback={<LoadingSpinner message="Please wait!..." size="large" />}
-            >
-              <Navigate href="/" />
-            </Show>
+            throw e;
           }
-        >
-        
-          {(data) => (
-            <>
-              <h1 class="text-3xl font-bold text-center text-blue-400 mb-8">
-                Create Your Character
-              </h1>
+        })()}
+        fallback={
+          <Show
+            when={(() => {
+              try {
+                characterData();
+                return false;
+              } catch (e: any) {
+                return e instanceof Error && e.message === "Personnage existe déjà";
+              }
+            })()}
+            fallback={<LoadingSpinner message="Please wait!..." size="large" />}
+          >
+            <Navigate href="/" />
+          </Show>
+        }
+      >
+        {(data) => (
+          <>
+            <h1 class="text-3xl font-bold text-center text-blue-400 mb-8">
+              Create Your Character
+            </h1>
 
-              <form
-                action={createCharacter.with(data().userId, character().remainingPoints)}
-                method="post"
-                class="max-w-2xl mx-auto bg-gray-800 rounded-xl shadow-lg p-6"
-              >
-                <div class="mb-6">
-                  <label for="name" class="block text-sm font-medium text-gray-300 mb-2">
-                    Character Name
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={character().name}
-                    onInput={(e) =>
-                      setCharacter({ ...character(), name: e.currentTarget.value })
-                    }
-                    class="w-full px-3 py-2 border border-gray-700 bg-gray-700 text-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your character's name"
-                  />
+            <form
+              action={createCharacter.with(data().userId, character().remainingPoints)}
+              method="post"
+              class="max-w-2xl mx-auto bg-gray-800 rounded-xl shadow-lg p-6"
+            >
+              <div class="mb-6">
+                <label for="name" class="block text-sm font-medium text-gray-300 mb-2">
+                  Character Name
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={character().name}
+                  onInput={(e) =>
+                    setCharacter({ ...character(), name: e.currentTarget.value })
+                  }
+                  class="w-full px-3 py-2 border border-gray-700 bg-gray-700 text-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter your character's name"
+                />
+              </div>
+
+              <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-300 mb-2">Class</label>
+                <input type="hidden" name="class" value={`${character().class}`} />
+                <div class="grid grid-cols-3 gap-4">
+                  {["WARRIOR", "MAGE", "ROGUE"].map((classType) => (
+                    <button
+                      type="button"
+                      class={cn(
+                        "p-4 rounded-lg border-2 transition",
+                        character().class === classType
+                          ? "border-blue-500 bg-gray-700"
+                          : "border-gray-700 bg-gray-800 hover:bg-gray-700"
+                      )}
+                      onClick={() =>
+                        setCharacter({ ...character(), class: classType as any })
+                      }
+                    >
+                      <div class="text-center">
+                        <div
+                          class={cn(
+                            "text-xl font-bold",
+                            character().class === classType
+                              ? "text-blue-400"
+                              : "text-gray-400"
+                          )}
+                        >
+                          {{
+                            WARRIOR: "Warrior",
+                            MAGE: "Mage",
+                            ROGUE: "Rogue",
+                          }[classType]}
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">
+                          {{
+                            WARRIOR: "Specialized in defense and physical attacks",
+                            MAGE: "Specialized in magic and intelligence",
+                            ROGUE: "Specialized in speed and agility",
+                          }[classType]}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div class="mb-6">
+                <div class="flex justify-between items-center mb-2">
+                  <label class="text-sm font-medium text-gray-300">Attributes</label>
+                  <span class="text-sm text-blue-400">
+                    Points Remaining: {character().remainingPoints}
+                  </span>
                 </div>
 
-                <div class="mb-6">
-                  <label class="block text-sm font-medium text-gray-300 mb-2">Class</label>
-                  <input type="hidden" name="class" value={`${character().class}`} />
-                  <div class="grid grid-cols-3 gap-4">
-                    {["WARRIOR", "MAGE", "ROGUE"].map((classType) => (
-                      <button
-                        type="button"
-                        class={cn(
-                          "p-4 rounded-lg border-2 transition",
-                          character().class === classType
-                            ? "border-blue-500 bg-gray-700"
-                            : "border-gray-700 bg-gray-800 hover:bg-gray-700"
-                        )}
-                        onClick={() =>
-                          setCharacter({ ...character(), class: classType as any })
-                        }
-                      >
-                        <div class="text-center">
-                          <div
-                            class={cn(
-                              "text-xl font-bold",
-                              character().class === classType
-                                ? "text-blue-400"
-                                : "text-gray-400"
-                            )}
-                          >
-                            {{
-                              WARRIOR: "Warrior",
-                              MAGE: "Mage",
-                              ROGUE: "Rogue",
-                            }[classType]}
-                          </div>
-                          <p class="text-xs text-gray-400 mt-2">
-                            {{
-                              WARRIOR: "Specialized in defense and physical attacks",
-                              MAGE: "Specialized in magic and intelligence",
-                              ROGUE: "Specialized in speed and agility",
-                            }[classType]}
+                <div class="space-y-4">
+                  {[
+                    {
+                      name: "Strength",
+                      key: "strength",
+                      description: "Increases physical damage and carry capacity",
+                    },
+                    {
+                      name: "Intelligence",
+                      key: "intelligence",
+                      description: "Boosts magic damage and reduces skill cooldown",
+                    },
+                    {
+                      name: "Endurance",
+                      key: "endurance",
+                      description: "Improves HP and defense",
+                    },
+                  ].map((attribute) => (
+                    <div class="bg-gray-700 rounded-lg p-4">
+                      <div class="flex justify-between items-center mb-2">
+                        <div>
+                          <h3 class="font-medium text-gray-200">{attribute.name}</h3>
+                          <p class="text-xs text-gray-400">
+                            {attribute.description}
                           </p>
                         </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div class="mb-6">
-                  <div class="flex justify-between items-center mb-2">
-                    <label class="text-sm font-medium text-gray-300">Attributes</label>
-                    <span class="text-sm text-blue-400">
-                      Points Remaining: {character().remainingPoints}
-                    </span>
-                  </div>
-
-                  <div class="space-y-4">
-                    {[
-                      {
-                        name: "Strength",
-                        key: "strength",
-                        description: "Increases physical damage and carry capacity",
-                      },
-                      {
-                        name: "Intelligence",
-                        key: "intelligence",
-                        description: "Boosts magic damage and reduces skill cooldown",
-                      },
-                      {
-                        name: "Endurance",
-                        key: "endurance",
-                        description: "Improves HP and defense",
-                      },
-                    ].map((attribute) => (
-                      <div class="bg-gray-700 rounded-lg p-4">
-                        <div class="flex justify-between items-center mb-2">
-                          <div>
-                            <h3 class="font-medium text-gray-200">{attribute.name}</h3>
-                            <p class="text-xs text-gray-400">
-                              {attribute.description}
-                            </p>
-                          </div>
-                          <div class="flex items-center space-x-3">
-                            <button
-                              type="button"
-                              class="w-8 h-8 rounded-full bg-gray-600 text-gray-200 flex items-center justify-center hover:bg-gray-500"
-                              onClick={() =>
-                                handleAttributeChange(attribute.key, -1)
-                              }
-                            >
-                              -
-                            </button>
-                            <input
-                              type="hidden"
-                              name={attribute.key}
-                              value={`${character()[attribute.key as "strength" | "intelligence" | "endurance"]}`}
-                            />
-                            <span class="text-lg font-bold text-blue-400 w-8 text-center">
-                              {
-                                character()[
-                                  attribute.key as "strength" | "intelligence" | "endurance"
-                                ]
-                              }
-                            </span>
-                            <button
-                              type="button"
-                              class={cn(
-                                "w-8 h-8 rounded-full text-gray-200 flex items-center justify-center",
-                                character().remainingPoints > 0
-                                  ? "bg-blue-600 hover:bg-blue-500"
-                                  : "bg-gray-600 cursor-not-allowed"
-                              )}
-                              onClick={() =>
-                                handleAttributeChange(attribute.key, 1)
-                              }
-                              disabled={character().remainingPoints <= 0}
-                            >
-                              +
-                            </button>
-                          </div>
+                        <div class="flex items-center space-x-3">
+                          <button
+                            type="button"
+                            class="w-8 h-8 rounded-full bg-gray-600 text-gray-200 flex items-center justify-center hover:bg-gray-500"
+                            onClick={() =>
+                              handleAttributeChange(attribute.key, -1)
+                            }
+                          >
+                            -
+                          </button>
+                          <input
+                            type="hidden"
+                            name={attribute.key}
+                            value={`${character()[attribute.key as "strength" | "intelligence" | "endurance"]}`}
+                          />
+                          <span class="text-lg font-bold text-blue-400 w-8 text-center">
+                            {
+                              character()[
+                                attribute.key as "strength" | "intelligence" | "endurance"
+                              ]
+                            }
+                          </span>
+                          <button
+                            type="button"
+                            class={cn(
+                              "w-8 h-8 rounded-full text-gray-200 flex items-center justify-center",
+                              character().remainingPoints > 0
+                                ? "bg-blue-600 hover:bg-blue-500"
+                                : "bg-gray-600 cursor-not-allowed"
+                            )}
+                            onClick={() =>
+                              handleAttributeChange(attribute.key, 1)
+                            }
+                            disabled={character().remainingPoints <= 0}
+                          >
+                            +
+                          </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
+              </div>
 
-                <Show when={submission.error || submission.result?.error}>
-                  <ErrorAlert
-                    message={submission.error?.message || submission.result?.error}
-                  />
-                </Show>
+              <Show when={submission.error || submission.result?.error}>
+                <ErrorAlert
+                  message={submission.error?.message || submission.result?.error}
+                />
+              </Show>
 
-                <div class="mt-8">
-                  <button
-                    type="submit"
-                    disabled={!character().name.trim() || submission.pending}
-                    class={cn(
-                      "w-full py-3 px-4 rounded-md font-medium text-white",
-                      character().name.trim()
-                        ? "bg-blue-600 hover:bg-blue-700"
-                        : "bg-gray-600 cursor-not-allowed"
-                    )}
-                  >
-                    {submission.pending ? "Loading..." : "Create Character"}
-                  </button>
-                </div>
-              </form>
-            </>
-          )}
-        </Show>
-      </div>
+              <div class="mt-8">
+                <button
+                  type="submit"
+                  disabled={!character().name.trim() || submission.pending}
+                  class={cn(
+                    "w-full py-3 px-4 rounded-md font-medium text-white",
+                    character().name.trim()
+                      ? "bg-blue-600 hover:bg-blue-700"
+                      : "bg-gray-600 cursor-not-allowed"
+                  )}
+                >
+                  {submission.pending ? "Loading..." : "Create Character"}
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+      </Show>
+    </div>
   );
 }

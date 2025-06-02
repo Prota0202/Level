@@ -14,6 +14,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
 model User {
   id       Int      @id @default(autoincrement())
   email    String   @unique
@@ -71,7 +72,7 @@ model Item {
   characterId Int
   character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
 
-  // Optional foreign key ke Quest (sebagai reward)
+  // Optional foreign key to Quest (as reward)
   rewardFromQuestId Int?
   rewardFromQuest   Quest? @relation("RewardItems", fields: [rewardFromQuestId], references: [id], onDelete: SetNull)
 }

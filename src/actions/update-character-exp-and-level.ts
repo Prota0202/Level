@@ -29,7 +29,7 @@ export async function updateCharacterExpAndLevel({
     newMaxExpNeeded = Math.floor(character.maxExpNeeded * 2.5);
     leveledUp = true;
   } else if (reachedMaxLevel && newExp >= character.maxExpNeeded) {
-    // Sudah mentok level, exp tetap bertambah, exp cap hilang
+    
     newMaxExpNeeded = 0;
   }
 

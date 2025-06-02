@@ -1,13 +1,13 @@
 // src/lib/route-data.ts
 import { getSession } from "@auth/solid-start";
-import { cache, redirect } from "@solidjs/router";
+import { query, redirect } from "@solidjs/router";
 import { authOptions } from "~/routes/api/auth/[...solidauth]";
 import db from "./db";
 import { CharacterSidebar, LeaderboardUser, Quest, QuestStatus, Skill, Item } from "./types";
 import { getRequestEvent } from "solid-js/web";
 
 // Helper pour obtenir l'utilisateur authentifié
-export const getAuthenticatedUser = cache(async () => {
+export const getAuthenticatedUser = query(async () => {
   "use server";
   
   const event = getRequestEvent();
@@ -30,11 +30,26 @@ export const getAuthenticatedUser = cache(async () => {
   return user;
 }, "authenticated-user");
 
-// Helper pour obtenir le personnage de l'utilisateur
-export const getUserCharacter = cache(async () => {
+// Helper pour obtenir le personnage de l'utilisateur (avec redirection si pas de personnage)
+export const getUserCharacter = query(async () => {
   "use server";
   
-  const user = await getAuthenticatedUser();
+  const event = getRequestEvent();
+  if (!event) throw new Error("No request event");
+  
+  const session = await getSession(event.request, authOptions);
+  
+  if (!session?.user?.email) {
+    throw redirect("/login");
+  }
+
+  const user = await db.user.findUnique({
+    where: { email: session.user.email }
+  });
+
+  if (!user) {
+    throw redirect("/login");
+  }
   
   const character = await db.character.findUnique({
     where: { userId: user.id },
@@ -50,22 +65,53 @@ export const getUserCharacter = cache(async () => {
   return character;
 }, "user-character");
 
-// Données pour la sidebar
-export const getSidebarData = cache(async (): Promise<CharacterSidebar> => {
+// Données pour la sidebar (sans dépendance sur getUserCharacter)
+export const getSidebarData = query(async (): Promise<CharacterSidebar | null> => {
   "use server";
   
-  const character = await getUserCharacter();
+  try {
+    const event = getRequestEvent();
+    if (!event) return null;
+    
+    const session = await getSession(event.request, authOptions);
+    
+    if (!session?.user?.email) {
+      return null;
+    }
 
-  return {
-    userName: character.user.name || "Unknown",
-    name: character.name,
-    class: character.class,
-    level: character.level
-  };
+    const user = await db.user.findUnique({
+      where: { email: session.user.email }
+    });
+
+    if (!user) {
+      return null;
+    }
+    
+    const character = await db.character.findUnique({
+      where: { userId: user.id },
+      include: {
+        user: true
+      }
+    });
+
+    if (!character) {
+      return null;
+    }
+
+    return {
+      userName: character.user.name || "Unknown",
+      name: character.name,
+      class: character.class,
+      level: character.level
+    };
+  } catch (error) {
+    console.log("Error in getSidebarData:", error);
+    return null;
+  }
 }, "sidebar-data");
 
 // Données pour l'inventaire
-export const getInventoryData = cache(async (): Promise<Item[]> => {
+export const getInventoryData = query(async (): Promise<Item[]> => {
   "use server";
   
   const character = await getUserCharacter();
@@ -81,7 +127,7 @@ export const getInventoryData = cache(async (): Promise<Item[]> => {
 }, "inventory-data");
 
 // Données pour les skills
-export const getSkillsData = cache(async (): Promise<Skill[]> => {
+export const getSkillsData = query(async (): Promise<Skill[]> => {
   "use server";
   
   const character = await getUserCharacter();
@@ -94,7 +140,7 @@ export const getSkillsData = cache(async (): Promise<Skill[]> => {
 }, "skills-data");
 
 // Données pour les quêtes
-export const getQuestsData = cache(async () => {
+export const getQuestsData = query(async () => {
   "use server";
   
   const character = await getUserCharacter();
@@ -118,7 +164,7 @@ export const getQuestsData = cache(async () => {
 }, "quests-data");
 
 // Données pour le leaderboard
-export const getLeaderboardData = cache(async () => {
+export const getLeaderboardData = query(async () => {
   "use server";
   
   const character = await getUserCharacter();
@@ -174,10 +220,25 @@ export const getLeaderboardData = cache(async () => {
 }, "leaderboard-data");
 
 // Vérifier si l'utilisateur a un personnage
-export const checkUserCharacter = cache(async () => {
+export const checkUserCharacter = query(async () => {
   "use server";
   
-  const user = await getAuthenticatedUser();
+  const event = getRequestEvent();
+  if (!event) throw new Error("No request event");
+  
+  const session = await getSession(event.request, authOptions);
+  
+  if (!session?.user?.email) {
+    throw redirect("/login");
+  }
+
+  const user = await db.user.findUnique({
+    where: { email: session.user.email }
+  });
+
+  if (!user) {
+    throw redirect("/login");
+  }
   
   const character = await db.character.findUnique({
     where: { userId: user.id },

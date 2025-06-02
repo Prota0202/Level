@@ -25,7 +25,7 @@ type AttributesType = Pick<
   "endurance" | "strength" | "intelligence" | "availablePoints"
 >;
 
-// Server‐side query to fetch the logged‐in user’s character (with counts)
+// Server‐side query to fetch the logged‐in user's character (with counts)
 const getCharacterData = query(
   async () => {
     "use server";
@@ -53,8 +53,11 @@ const getCharacterData = query(
         inventory: { take: 3, where: { status: "COMPLETED" } },
       },
     });
+    
+    // Au lieu de lancer une erreur, on redirige
     if (!character) {
-      throw new Error("Character not found");
+      // Utiliser une redirection côté client via JavaScript
+      return null;
     }
 
     const [completedCount, inProgressCount, failedCount] = await Promise.all([
@@ -122,9 +125,14 @@ export default function DashboardLayout() {
 
   const [attributes, setAttributes] = createSignal<AttributesType | null>(null);
 
-  // Initialize attributes once character data resolves
+  // Redirection côté client si pas de personnage
   createMemo(() => {
     const charData = character();
+    if (charData === null) {
+      // Rediriger vers la création de personnage
+      navigate('/character/create');
+      return;
+    }
     if (charData) {
       setAttributes({
         availablePoints: charData.availablePoints,
@@ -177,7 +185,7 @@ export default function DashboardLayout() {
     <Layout>
       <div class="container mx-auto h-full px-4 py-8">
         <Show
-          when={character() !== undefined && attributes() !== null}
+          when={character() !== undefined && character() !== null && attributes() !== null}
           fallback={
             <div class="h-full flex justify-center items-center">
               <LoadingSpinner size="large" message="Please wait..." />

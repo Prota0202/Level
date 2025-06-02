@@ -7,12 +7,17 @@ import Layout from "~/components/layout";
 import LoadingSpinner from "~/components/loading";
 import { LeaderboardUser } from "~/lib/types";
 import { cn } from "~/lib/utils";
+import { getRequestEvent } from "solid-js/web";
 
 // Query serveur pour récupérer le leaderboard
 export const getLeaderboardData = query(async () => {
   "use server";
+
+  const event = getRequestEvent();
+    if (!event) throw new Error("No request event");
+    
   
-  const session = await getSession(authOptions);
+  const session = await getSession(event.request,authOptions);
   if (!session?.user) {
     throw new Error("Non autorisé");
   }

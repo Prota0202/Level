@@ -1,8 +1,6 @@
-import { A, action, useAction, useSearchParams, createAsync, query } from '@solidjs/router';
-import { createSignal, Show, createMemo } from 'solid-js';
-import { getSession } from "@auth/solid-start";
-import { authOptions } from "~/routes/api/auth/[...solidauth]";
-import { For } from 'solid-js/web';
+// src/components/dashboard/skills-layout.tsx
+import { A, action, useAction, useSearchParams, createAsync } from '@solidjs/router';
+import { createSignal, For, Show } from 'solid-js';
 import { updateCharacterExpAndLevel } from '~/actions/update-character-exp-and-level';
 import Layout from '~/components/layout';
 import LoadingSpinner from '~/components/loading';
@@ -10,39 +8,7 @@ import { SuccessAlert } from '~/components/success-alert';
 import { useToast } from '~/components/toast/toast';
 import db from '~/lib/db';
 import { Skill } from '~/lib/types';
-
-// Query pour récupérer les skills
-export const getSkillsData = query(async () => {
-  "use server";
-  
-  const session = await getSession(authOptions);
-  if (!session?.user) {
-    throw new Error("Non autorisé");
-  }
-
-  const user = await db.user.findUnique({
-    where: { email: session.user.email! },
-    select: {
-      character: {
-        select: { id: true }
-      }
-    }
-  });
-
-  if (!user) {
-    throw new Error("Utilisateur non trouvé");
-  }
-
-  if (!user.character) {
-    throw new Error("Personnage non trouvé");
-  }
-
-  const skills = await db.skill.findMany({
-    where: { characterId: user.character.id },
-  });
-
-  return skills as Skill[];
-}, "skills");
+import { getSkillsData, getUserCharacter } from '~/lib/route-data';
 
 const removeSkill = action(async (skillId: number) => {
   "use server";
@@ -110,23 +76,16 @@ const upgradeSkill = action(async (skillId: number) => {
 }, "upgradeSkill");
 
 export default function SkillsLayout() {
-  const skillsData = createAsync(() => getSkillsData());
   const [selectedSkill, setSelectedSkill] = createSignal<Skill | null>(null);
-  const [skills, setSkills] = createSignal<Skill[]>([]);
-  const [refetchCharacter, setRefetchCharacter] = createSignal<() => Promise<void>>();
+  
+  // Utilise createAsync pour charger les données
+  const skillsData = createAsync(() => getSkillsData());
+  const character = createAsync(() => getUserCharacter());
 
   const removeSkillAction = useAction(removeSkill);
   const upgradeSkillAction = useAction(upgradeSkill);
   const [searchParams] = useSearchParams();
   const toast = useToast();
-
-  // Initialiser les skills quand les données sont chargées
-  createMemo(() => {
-    const data = skillsData();
-    if (data) {
-      setSkills(data);
-    }
-  });
 
   const renderSkillCard = (skill: Skill) => {
     const isSelected = () => selectedSkill()?.id === skill.id;
@@ -215,22 +174,13 @@ export default function SkillsLayout() {
               if (selectedSkill()) {
                 const data = await upgradeSkillAction(selectedSkill()?.id!);
                 if (data.success && data.skill) {
-                  // Update skill in list
-                  setSkills((prev) =>
-                    prev.map((skill) =>
-                      skill.id === data.skill.id ? data.skill : skill
-                    )
-                  );
-
                   // Update selectedSkill
                   setSelectedSkill(data.skill);
 
                   data.success.forEach(async (message, index) => {
                     if (index === 1) {
-                      toast.levelUp(message)
-                      if (refetchCharacter()) {
-                        await refetchCharacter()!();
-                      }
+                      toast.levelUp(message);
+                      // Refetch character data will happen automatically
                     } else toast.success(message);
                     await new Promise(resolve => setTimeout(resolve, 500));
                   });
@@ -248,7 +198,6 @@ export default function SkillsLayout() {
               if (selectedSkill()) {
                 const data = await removeSkillAction(selectedSkill()?.id!);
                 if (data.success) {
-                  setSkills((prev) => prev.filter((skill) => skill.id !== selectedSkill()?.id));
                   setSelectedSkill(null);
                   toast.warning(data.success);
                 } else if (data.error) {
@@ -265,7 +214,7 @@ export default function SkillsLayout() {
   };
 
   return (
-    <Layout onCharacterReady={(refetch) => setRefetchCharacter(() => refetch)}>
+    <Layout>
       <div class="container mx-auto px-4 py-8">
         <h1 class="text-3xl font-bold text-center text-blue-400 mb-8">Skills</h1>
 
@@ -282,9 +231,11 @@ export default function SkillsLayout() {
             <div class="bg-gray-800 rounded-xl shadow-lg p-6">
               <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-bold text-gray-200">Skill List</h2>
-                <div class="bg-blue-900/30 px-3 py-1 rounded-full">
-                  <span class="text-sm text-blue-300">Total: {skills().length} skills</span>
-                </div>
+                <Show when={skillsData()}>
+                  <div class="bg-blue-900/30 px-3 py-1 rounded-full">
+                    <span class="text-sm text-blue-300">Total: {skillsData()!.length} skills</span>
+                  </div>
+                </Show>
               </div>
               <Show when={searchParams.create_skill === 'success'}>
                 <div class="mb-4">
@@ -301,18 +252,20 @@ export default function SkillsLayout() {
                   </div>
                 )}
               >
-                <Show when={skills().length > 0} fallback={
-                  <div class="flex flex-col items-center justify-center py-12 text-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    <p class="text-lg font-medium">You don't have any skills yet</p>
-                  </div>
-                }>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <For each={skills()}>{renderSkillCard}</For>
-                  </div>
-                </Show>
+                {(skills) => (
+                  <Show when={skills().length > 0} fallback={
+                    <div class="flex flex-col items-center justify-center py-12 text-gray-400">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <p class="text-lg font-medium">You don't have any skills yet</p>
+                    </div>
+                  }>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <For each={skills()}>{renderSkillCard}</For>
+                    </div>
+                  </Show>
+                )}
               </Show>
             </div>
           </div>

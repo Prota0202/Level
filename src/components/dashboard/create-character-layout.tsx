@@ -1,45 +1,13 @@
-import { action, useSubmission, Navigate } from "@solidjs/router";
-import { createAsync, query } from "@solidjs/router";
+// src/components/dashboard/create-character-layout.tsx
+import { action, useNavigate, useSubmission, createAsync } from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
-import { getSession } from "@auth/solid-start";
-import { authOptions } from "~/routes/api/auth/[...solidauth]";
-import { redirect } from "solid-start/server";
+import { redirect } from "@solidjs/router";
 import { ErrorAlert } from "~/components/error-alert";
 import LoadingSpinner from "~/components/loading";
 import db from "~/lib/db";
 import { cn } from "~/lib/utils";
 import { characterSchema } from "~/lib/validation";
-
-// Query pour vérifier le statut du personnage
-export const getCreateCharacterData = query(async () => {
-  "use server";
-  
-  const session = await getSession(authOptions);
-  if (!session?.user) {
-    throw new Error("Non autorisé");
-  }
-
-  const user = await db.user.findUnique({
-    where: { email: session.user.email! }
-  });
-
-  if (!user) {
-    throw new Error("Utilisateur non trouvé");
-  }
-
-  const character = await db.character.findUnique({
-    where: { userId: user.id },
-    select: { id: true }
-  });
-
-  if (character) {
-    throw new Error("Personnage existe déjà");
-  }
-
-  return {
-    userId: user.id
-  };
-}, "createCharacter");
+import { checkUserCharacter } from "~/lib/route-data";
 
 const createCharacter = action(async (
   userId: number,
@@ -85,8 +53,18 @@ const createCharacter = action(async (
 }, "createCharacter");
 
 export default function CreateCharacterLayout() {
-  const characterData = createAsync(() => getCreateCharacterData());
   const submission = useSubmission(createCharacter);
+  const navigate = useNavigate();
+  
+  // Utilise createAsync pour vérifier si l'utilisateur a déjà un personnage
+  const userCheck = createAsync(async () => {
+    const result = await checkUserCharacter();
+    if (result.hasCharacter) {
+      navigate('/');
+    }
+    return result;
+  });
+
   const [character, setCharacter] = createSignal({
     name: "",
     class: "WARRIOR",
@@ -112,19 +90,7 @@ export default function CreateCharacterLayout() {
   return (
     <div class="bg-gray-900">
       <div class="container mx-auto min-h-screen flex flex-col items-center justify-center px-4 py-8">
-        <Show
-          when={characterData()}
-          fallback={
-            <Show
-              when={characterData.error?.message === "Personnage existe déjà"}
-              fallback={
-                <LoadingSpinner message="Please wait!..." size="large" />
-              }
-            >
-              <Navigate href="/" />
-            </Show>
-          }
-        >
+        <Show when={userCheck()} fallback={<LoadingSpinner message="Please wait!..." size="large" />}>
           {(data) => (
             <>
               <h1 class="text-3xl font-bold text-center text-blue-400 mb-8">Create Your Character</h1>

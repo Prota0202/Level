@@ -10,6 +10,7 @@ import { availableItems } from "~/constants/dummy";
 import db from "~/lib/db";
 import { getExpReward } from "~/lib/utils";
 import { questFormSchema, rewardListSchema } from "~/lib/validation";
+import { getRequestEvent } from "solid-js/web";
 
 type RewardItem = {
   id: number;
@@ -22,7 +23,10 @@ type RewardItem = {
 export const getCreateQuestData = query(async () => {
   "use server";
   
-  const session = await getSession(authOptions);
+  const event = getRequestEvent();
+    if (!event) throw new Error("No request event");
+
+  const session = await getSession(event.request,authOptions);
   if (!session?.user) {
     throw new Error("Non autorisé");
   }

@@ -8,12 +8,18 @@ import LoadingSpinner from "~/components/loading";
 import db from "~/lib/db";
 import { cn } from "~/lib/utils";
 import { characterSchema } from "~/lib/validation";
+// Removed unused imports from "~/lib/route-data"
+import { getRequestEvent } from "solid-js/web";
 
 // Query pour vérifier le statut du personnage
 export const getCreateCharacterData = query(async () => {
   "use server";
 
-  const session = await getSession(authOptions);
+  const event = getRequestEvent();
+    if (!event) throw new Error("No request event");
+    
+  
+  const session = await getSession(event.request,authOptions);
   if (!session?.user) {
     throw new Error("Non autorisé");
   }
@@ -96,7 +102,8 @@ export default function CreateCharacterLayout() {
 
   const handleAttributeChange = (attribute: string, value: number) => {
     const c = character();
-    const newValue = c[attribute as keyof typeof c] + value;
+    const current = Number(c[attribute as keyof typeof c]);
+    const newValue = current + value;
     if (value > 0 && c.remainingPoints <= 0) return;
     if (newValue < 5) return;
 
@@ -109,18 +116,34 @@ export default function CreateCharacterLayout() {
 
   return (
     <div class="bg-gray-900">
-      <div class="container mx-auto min-h-screen flex flex-col items-center justify-center px-4 py-8">
         <Show
-          when={characterData()}
+          when={(() => {
+            try {
+              return characterData();
+            } catch (e: any) {
+              if (e instanceof Error && e.message === "Personnage existe déjà") {
+                return null;
+              }
+              throw e;
+            }
+          })()}
           fallback={
             <Show
-              when={characterData.error?.message === "Personnage existe déjà"}
+              when={(() => {
+                try {
+                  characterData();
+                  return false;
+                } catch (e: any) {
+                  return e instanceof Error && e.message === "Personnage existe déjà";
+                }
+              })()}
               fallback={<LoadingSpinner message="Please wait!..." size="large" />}
             >
               <Navigate href="/" />
             </Show>
           }
         >
+        
           {(data) => (
             <>
               <h1 class="text-3xl font-bold text-center text-blue-400 mb-8">
@@ -297,6 +320,5 @@ export default function CreateCharacterLayout() {
           )}
         </Show>
       </div>
-    </div>
   );
 }

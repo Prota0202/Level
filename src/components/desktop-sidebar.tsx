@@ -7,7 +7,7 @@ import LoadingSpinner from './loading';
 import { CharacterSidebar } from '~/lib/types';
 
 interface IProps {
-  character: () => CharacterSidebar | null;
+  character: () => CharacterSidebar | null | undefined;
 }
 
 export default function DesktopSidebar({ character }: IProps) {
@@ -15,52 +15,55 @@ export default function DesktopSidebar({ character }: IProps) {
   const pathname = createMemo(() => location.pathname);
 
   return (
-    <>
+    <Show when={character() !== null}>
       <div class="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 bg-gray-800">
         <div class="flex flex-col grow pt-5 pb-4 overflow-y-auto">
           <div class="flex items-center shrink-0 px-4 mb-5">
             <span class="text-xl font-bold text-blue-400">My Solo Up</span>
           </div>
+          
           <Show
-            when={!!character()}
+            when={character()}
             fallback={(
               <div class="my-10">
                 <LoadingSpinner size="small" />
               </div>
             )}
           >
-            <div class="px-4 mb-6">
-              <h4 class="text-sm font-medium text-gray-300">
-                Hello, {character()?.userName}!
-              </h4>
-              <div class="bg-gray-700 rounded-lg p-4 mt-2">
-                <div class="flex items-center">
-                  <div
-                    class={cn(
-                      'w-10 h-10 rounded-full flex items-center justify-center mr-3',
-                      character()?.class === 'WARRIOR' && 'bg-red-900/30 text-red-400',
-                      character()?.class === 'MAGE' && 'bg-blue-900/30 text-blue-400',
-                      character()?.class === 'ROGUE' && 'bg-green-900/30 text-green-400'
-                    )}
-                  >
-                    {character()?.class === 'WARRIOR' && 'W'}
-                    {character()?.class === 'MAGE' && 'M'}
-                    {character()?.class === 'ROGUE' && 'R'}
-                  </div>
-                  <div>
-                    <div class="font-medium">{character()?.name}</div>
-                    <div class="text-xs text-gray-400">
-                      Lvl {character()?.level}{' '}
-                      {character()?.class === 'WARRIOR'
-                        ? 'Warrior'
-                        : character()?.class === 'MAGE'
-                          ? 'Mage'
-                          : 'Rogue'}
+            {(char) => (
+              <div class="px-4 mb-6">
+                <h4 class="text-sm font-medium text-gray-300">
+                  Hello, {char().userName}!
+                </h4>
+                <div class="bg-gray-700 rounded-lg p-4 mt-2">
+                  <div class="flex items-center">
+                    <div
+                      class={cn(
+                        'w-10 h-10 rounded-full flex items-center justify-center mr-3',
+                        char().class === 'WARRIOR' && 'bg-red-900/30 text-red-400',
+                        char().class === 'MAGE' && 'bg-blue-900/30 text-blue-400',
+                        char().class === 'ROGUE' && 'bg-green-900/30 text-green-400'
+                      )}
+                    >
+                      {char().class === 'WARRIOR' && 'W'}
+                      {char().class === 'MAGE' && 'M'}
+                      {char().class === 'ROGUE' && 'R'}
+                    </div>
+                    <div>
+                      <div class="font-medium">{char().name}</div>
+                      <div class="text-xs text-gray-400">
+                        Lvl {char().level}{' '}
+                        {char().class === 'WARRIOR'
+                          ? 'Warrior'
+                          : char().class === 'MAGE'
+                            ? 'Mage'
+                            : 'Rogue'}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </Show>
 
           <nav class="mt-5 flex-1 px-4 space-y-1">
@@ -100,6 +103,6 @@ export default function DesktopSidebar({ character }: IProps) {
           </button>
         </div>
       </div>
-    </>
+    </Show>
   );
 }

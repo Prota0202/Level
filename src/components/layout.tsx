@@ -1,5 +1,5 @@
 // src/components/layout.tsx
-import { JSX } from 'solid-js';
+import { JSX, Show } from 'solid-js';
 import MobileSidebar from './mobile-sidebar';
 import DesktopSidebar from './desktop-sidebar';
 import { createAsync } from '@solidjs/router';
@@ -15,10 +15,12 @@ export default function Layout({ children }: IProps) {
 
   return (
     <div class="min-h-screen bg-gray-900 text-gray-100 flex">
-      <DesktopSidebar character={character} />
-      <MobileSidebar character={character} />
+      <Show when={character() !== undefined}>
+        <DesktopSidebar character={character} />
+        <MobileSidebar character={character} />
+      </Show>
 
-      <main class="md:ml-64 flex-1 py-6 md:py-12 min-h-screen pt-20 md:pt-0 overflow-hidden">
+      <main class={`${character() ? 'md:ml-64' : ''} flex-1 py-6 md:py-12 min-h-screen pt-20 md:pt-0 overflow-hidden`}>
         {children}
       </main>
     </div>

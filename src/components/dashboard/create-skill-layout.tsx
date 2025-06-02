@@ -7,12 +7,16 @@ import Layout from '~/components/layout';
 import LoadingSpinner from '~/components/loading';
 import db from '~/lib/db';
 import { skillSchema } from '~/lib/validation';
+import { getRequestEvent } from "solid-js/web";
 
 // Query pour récupérer l'email de l'utilisateur
 export const getCreateSkillData = query(async () => {
   "use server";
   
-  const session = await getSession(authOptions);
+  const event = getRequestEvent();
+  if (!event) throw new Error("No request event");
+
+  const session = await getSession(event.request, authOptions);
   if (!session?.user) {
     throw new Error("Non autorisé");
   }
@@ -153,6 +157,7 @@ export default function CreateSkillLayout() {
                       type="button"
                       class="px-4 py-2 bg-gray-700 text-gray-300 rounded-md mr-3 hover:bg-gray-600"
                       disabled={submission.pending}
+                      onClick={() => history.back()}
                     >
                       Cancel
                     </button>

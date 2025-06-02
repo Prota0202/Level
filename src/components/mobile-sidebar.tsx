@@ -1,13 +1,13 @@
 import { A, useLocation } from '@solidjs/router';
 import { navigationItems } from '~/constants/dummy';
 import { cn } from '~/lib/utils';
-import { createSignal, createMemo, Show, Accessor } from 'solid-js';
+import { createSignal, createMemo, Show } from 'solid-js';
 import { signOut } from '@auth/solid-start/client';
 import { CharacterSidebar } from '~/lib/types';
 import LoadingSpinner from './loading';
 
 interface IProps {
-  character: () => CharacterSidebar | null;
+  character: () => CharacterSidebar | null | undefined;
 }
 
 export default function MobileSidebar({ character }: IProps) {
@@ -16,7 +16,7 @@ export default function MobileSidebar({ character }: IProps) {
   const pathname = createMemo(() => location.pathname);
 
   return (
-    <>
+    <Show when={character() !== null}>
       <div class="md:hidden fixed top-0 left-0 right-0 z-10 bg-gray-800 border-b border-gray-700">
         <div class="flex items-center justify-between h-16 px-4">
           <span class="text-xl font-bold text-blue-400">Solo Leveling</span>
@@ -56,6 +56,7 @@ export default function MobileSidebar({ character }: IProps) {
                     ? 'bg-gray-900 text-blue-400'
                     : 'text-gray-300 hover:bg-gray-700 hover:text-white'
                 )}
+                onClick={() => setIsMobileMenuOpen(false)}
               >
                 <div
                   class={cn(
@@ -72,40 +73,42 @@ export default function MobileSidebar({ character }: IProps) {
             ))}
 
             <Show
-              when={!!character()}
+              when={character()}
               fallback={(
                 <div class="my-3 pt-2 border-t border-gray-700">
                   <LoadingSpinner size="small" />
                 </div>
               )}
             >
-              <div class="flex items-center px-3 py-4 mt-4 border-t border-gray-700">
-                <div
-                  class={cn(
-                    'w-8 h-8 rounded-full flex items-center justify-center mr-3',
-                    character()?.class === 'WARRIOR' && 'bg-red-900/30 text-red-400',
-                    character()?.class === 'MAGE' && 'bg-blue-900/30 text-blue-400',
-                    character()?.class === 'ROGUE' && 'bg-green-900/30 text-green-400'
-                  )}
-                >
-                  {character()?.class === 'WARRIOR' && 'W'}
-                  {character()?.class === 'MAGE' && 'M'}
-                  {character()?.class === 'ROGUE' && 'R'}
-                </div>
-                <div>
-                  <div class="font-medium text-gray-300">
-                    {character()?.name}
+              {(char) => (
+                <div class="flex items-center px-3 py-4 mt-4 border-t border-gray-700">
+                  <div
+                    class={cn(
+                      'w-8 h-8 rounded-full flex items-center justify-center mr-3',
+                      char().class === 'WARRIOR' && 'bg-red-900/30 text-red-400',
+                      char().class === 'MAGE' && 'bg-blue-900/30 text-blue-400',
+                      char().class === 'ROGUE' && 'bg-green-900/30 text-green-400'
+                    )}
+                  >
+                    {char().class === 'WARRIOR' && 'W'}
+                    {char().class === 'MAGE' && 'M'}
+                    {char().class === 'ROGUE' && 'R'}
                   </div>
-                  <div class="text-xs text-gray-400">
-                    Lvl {character()?.level}{' '}
-                    {character()?.class === 'WARRIOR'
-                      ? 'Warrior'
-                      : character()?.class === 'MAGE'
-                        ? 'Mage'
-                        : 'Rogue'}
+                  <div>
+                    <div class="font-medium text-gray-300">
+                      {char().name}
+                    </div>
+                    <div class="text-xs text-gray-400">
+                      Lvl {char().level}{' '}
+                      {char().class === 'WARRIOR'
+                        ? 'Warrior'
+                        : char().class === 'MAGE'
+                          ? 'Mage'
+                          : 'Rogue'}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </Show>
 
             <button
@@ -118,6 +121,6 @@ export default function MobileSidebar({ character }: IProps) {
           </div>
         </Show>
       </div>
-    </>
+    </Show>
   );
 }

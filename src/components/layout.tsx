@@ -1,4 +1,3 @@
-// src/components/layout.tsx
 import { JSX, Show } from 'solid-js';
 import MobileSidebar from './mobile-sidebar';
 import DesktopSidebar from './desktop-sidebar';
@@ -10,7 +9,7 @@ interface IProps {
 }
 
 export default function Layout({ children }: IProps) {
-  // Utilise createAsync pour charger les données de la sidebar
+
   const character = createAsync(() => getSidebarData());
 
   return (

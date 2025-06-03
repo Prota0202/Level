@@ -1,4 +1,3 @@
-// src/components/dashboard/quests-layout.tsx
 import { A, action, useAction, useSearchParams, createAsync } from "@solidjs/router";
 import { createSignal, For, Show } from "solid-js";
 import Layout from "~/components/layout";
@@ -187,8 +186,7 @@ const updateQuest = action(async (questId: number, type: UpdateAction) => {
 
 export default function QuestsLayout() {
   const [activeTab, setActiveTab] = createSignal<QuestStatus>('AVAILABLE');
-  
-  // Utilise createAsync pour charger les données
+
   const questsData = createAsync(() => getQuestsData());
   const character = createAsync(() => getUserCharacter());
 

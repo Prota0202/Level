@@ -1,4 +1,3 @@
-// src/lib/route-data.ts
 import { getSession } from "@auth/solid-start";
 import { query, redirect } from "@solidjs/router";
 import { authOptions } from "~/routes/api/auth/[...solidauth]";

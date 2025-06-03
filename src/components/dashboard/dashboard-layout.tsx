@@ -1,16 +1,7 @@
-// src/components/dashboard/dashboard-layout.tsx
 import Layout from "~/components/layout";
 import { AttributeBar } from "~/components/dashboard/attribute-bar";
 import { createMemo, createSignal, Show } from "solid-js";
-import {
-  A,
-  action,
-  useAction,
-  useNavigate,
-  useSearchParams,
-  createAsync,
-  query,
-} from "@solidjs/router";
+import {A,action,useAction,useNavigate,useSearchParams,createAsync,query} from "@solidjs/router";
 import { SuccessAlert } from "~/components/success-alert";
 import { CharacterDashboard as CharacterDashboardType } from "~/lib/types";
 import LoadingSpinner from "~/components/loading";
@@ -25,7 +16,6 @@ type AttributesType = Pick<
   "endurance" | "strength" | "intelligence" | "availablePoints"
 >;
 
-// Server‐side query to fetch the logged‐in user's character (with counts)
 const getCharacterData = query(
   async () => {
     "use server";
@@ -56,7 +46,6 @@ const getCharacterData = query(
     
     // Au lieu de lancer une erreur, on redirige
     if (!character) {
-      // Utiliser une redirection côté client via JavaScript
       return null;
     }
 
@@ -120,16 +109,13 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
   const toast = useToast();
 
-  // Load character data on the server (SSR) and suspend until ready
   const character = createAsync(() => getCharacterData());
 
   const [attributes, setAttributes] = createSignal<AttributesType | null>(null);
 
-  // Redirection côté client si pas de personnage
   createMemo(() => {
     const charData = character();
     if (charData === null) {
-      // Rediriger vers la création de personnage
       navigate('/character/create');
       return;
     }
@@ -194,7 +180,7 @@ export default function DashboardLayout() {
         >
           {
             (() => {
-              const charData = character()!; // guaranteed non‐null inside Show
+              const charData = character()!; 
               const attrs = attributes()!;
 
               return (

@@ -15,8 +15,6 @@ export interface CharacterSidebar {
   level: number;
 }
 
-
-
 export type CharacterDashboard = CharacterType & {
   user: User;
   skills: SkillType[];

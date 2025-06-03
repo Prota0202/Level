@@ -1,4 +1,3 @@
-// src/components/LoadingSpinner.tsx
 import { JSX } from 'solid-js';
 import { cn } from '~/lib/utils';
 

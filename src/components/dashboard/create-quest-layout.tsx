@@ -19,7 +19,6 @@ type RewardItem = {
   quantity: number;
 };
 
-// Query pour récupérer l'email de l'utilisateur
 export const getCreateQuestData = query(async () => {
   "use server";
   

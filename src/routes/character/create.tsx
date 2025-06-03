@@ -10,7 +10,7 @@ import { cn } from "~/lib/utils";
 import { characterSchema } from "~/lib/validation";
 import { getRequestEvent } from "solid-js/web";
 
-// Query pour vérifier le statut du personnage
+
 const getCreateCharacterData = query(async () => {
   "use server";
 

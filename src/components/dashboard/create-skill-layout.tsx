@@ -9,7 +9,6 @@ import db from '~/lib/db';
 import { skillSchema } from '~/lib/validation';
 import { getRequestEvent } from "solid-js/web";
 
-// Query pour récupérer l'email de l'utilisateur
 export const getCreateSkillData = query(async () => {
   "use server";
   

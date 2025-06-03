@@ -1,4 +1,3 @@
-// src/components/dashboard/inventory-layout.tsx
 import { Component, For, Show } from "solid-js";
 import { createAsync } from "@solidjs/router";
 import Layout from "~/components/layout";
@@ -7,7 +6,7 @@ import { Item } from "~/lib/types";
 import { getInventoryData } from "~/lib/route-data";
 
 const InventoryLayout: Component = () => {
-  // Utilise createAsync pour charger les données directement
+  
   const inventory = createAsync(() => getInventoryData());
 
   const renderItemCard = (item: Item) => (

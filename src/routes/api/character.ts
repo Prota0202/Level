@@ -1,9 +1,8 @@
-// src/routes/api/character/[userId]/+server.ts
 import { getSession } from "@auth/solid-start";
 import { APIEvent } from "node_modules/@solidjs/start/dist/server";
 import { json } from "@solidjs/router";
 import db from "~/lib/db";
-import { authOptions } from "./auth/[...solidauth]";
+import { authOptions } from "../api/auth/[...solidauth]";
 
 export async function GET({ request }: APIEvent) {
   const session = await getSession(request, authOptions);

@@ -1,4 +1,3 @@
-// src/components/dashboard/skills-layout.tsx
 import { A, action, useAction, useSearchParams, createAsync } from '@solidjs/router';
 import { createSignal, For, Show } from 'solid-js';
 import { updateCharacterExpAndLevel } from '~/actions/update-character-exp-and-level';
@@ -77,8 +76,7 @@ const upgradeSkill = action(async (skillId: number) => {
 
 export default function SkillsLayout() {
   const [selectedSkill, setSelectedSkill] = createSignal<Skill | null>(null);
-  
-  // Utilise createAsync pour charger les données
+
   const skillsData = createAsync(() => getSkillsData());
   const character = createAsync(() => getUserCharacter());
 
@@ -180,7 +178,6 @@ export default function SkillsLayout() {
                   data.success.forEach(async (message, index) => {
                     if (index === 1) {
                       toast.levelUp(message);
-                      // Refetch character data will happen automatically
                     } else toast.success(message);
                     await new Promise(resolve => setTimeout(resolve, 500));
                   });

@@ -1,4 +1,3 @@
-// src/components/dashboard/create-character-layout.tsx
 import { action, useNavigate, useSubmission, createAsync } from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
 import { redirect } from "@solidjs/router";

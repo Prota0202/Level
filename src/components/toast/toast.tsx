@@ -1,10 +1,10 @@
 // Toast.tsx
 import { createSignal, createContext, useContext, onMount, onCleanup, JSX, Component, createEffect, Show } from 'solid-js';
 
-import './toast.css'; // Pastikan membuat file CSS terpisah untuk animasi
+import './toast.css'; // Assurez-vous de créer un fichier CSS séparé pour les animations
 import { Portal } from 'solid-js/web';
 
-// Mendefinisikan tipe-tipe
+// Définition des types
 export type ToastType =
   | 'success'
   | 'error'
@@ -70,10 +70,10 @@ interface ToastProps extends Toast {
   onDismiss: () => void;
 }
 
-// Context untuk Toast
+// Contexte pour Toast
 const ToastContext = createContext<ToastContextValue>();
 
-// Hook untuk menggunakan Toast
+// Hook pour utiliser Toast
 const useToast = (): ToastContextValue => {
   const context = useContext(ToastContext);
   if (!context) {
@@ -82,7 +82,7 @@ const useToast = (): ToastContextValue => {
   return context;
 };
 
-// Provider untuk Toast
+// Fournisseur pour Toast
 const ToastProvider: Component<ToastProviderProps> = (props) => {
   const [toasts, setToasts] = createSignal<Toast[]>([]);
   const [mounted, setMounted] = createSignal(false);
@@ -95,7 +95,7 @@ const ToastProvider: Component<ToastProviderProps> = (props) => {
     setMounted(false);
   });
 
-  // Fungsi untuk menambah toast
+  // Fonction pour ajouter un toast
   const addToast = (message: string, options: ToastOptions = {}): string => {
     const id = Math.random().toString(36).substring(2, 9);
     const toast: Toast = {
@@ -112,7 +112,7 @@ const ToastProvider: Component<ToastProviderProps> = (props) => {
 
     setToasts((prevToasts) => [...prevToasts, toast]);
 
-    // Auto dismiss
+    // Suppression automatique
     if (toast.duration !== Infinity) {
       setTimeout(() => {
         dismissToast(id);
@@ -122,7 +122,7 @@ const ToastProvider: Component<ToastProviderProps> = (props) => {
     return id;
   };
 
-  // Helper untuk mendapatkan judul default berdasarkan tipe
+  // Helper pour obtenir le titre par défaut selon le type
   const getDefaultTitle = (type: ToastType): string => {
     switch (type) {
       case 'success': return 'Success';
@@ -137,7 +137,7 @@ const ToastProvider: Component<ToastProviderProps> = (props) => {
     }
   };
 
-  // Fungsi untuk dismiss toast
+  // Fonction pour supprimer un toast
   const dismissToast = (id: string): void => {
     setToasts((prevToasts) => {
       const toast = prevToasts.find(t => t.id === id);
@@ -148,7 +148,7 @@ const ToastProvider: Component<ToastProviderProps> = (props) => {
     });
   };
 
-  // Shorthand methods untuk berbagai jenis toast
+  // Méthodes raccourcies pour différents types de toast
   const success = (message: string, options: ToastOptions = {}): string => {
     return addToast(message, { ...options, type: 'success' });
   };
@@ -213,7 +213,7 @@ const ToastProvider: Component<ToastProviderProps> = (props) => {
     quest
   };
 
-  // Gunakan Portal untuk mounting Toast Container
+  // Utilise Portal pour monter le conteneur Toast
   return (
     <ToastContext.Provider value={value}>
       {props.children}
@@ -226,7 +226,7 @@ const ToastProvider: Component<ToastProviderProps> = (props) => {
   );
 };
 
-// Container untuk toast
+// Conteneur pour les toasts
 const ToastContainer: Component<ToastContainerProps> = (props) => {
   return (
     <Show when={props.toasts().length > 0}>
@@ -242,20 +242,20 @@ const ToastContainer: Component<ToastContainerProps> = (props) => {
   );
 };
 
-// Komponen Toast individual
+// Composant Toast individuel
 const Toast: Component<ToastProps> = (props) => {
   const [isExiting, setIsExiting] = createSignal(false);
 
-  // Handle dismissal
+  // Gestion de la suppression
   const handleDismiss = (): void => {
     setIsExiting(true);
-    // Add a small delay before actually removing the toast
+    // Ajoute un petit délai avant de réellement supprimer le toast
     setTimeout(() => {
       props.onDismiss();
     }, 300);
   };
 
-  // Get background color based on type
+  // Obtient la couleur de fond selon le type
   const getBgColor = (): string => {
     switch (props.type) {
       case 'success': return 'bg-green-900/85 border-l-4 border-green-500';
@@ -270,7 +270,7 @@ const Toast: Component<ToastProps> = (props) => {
     }
   };
 
-  // Determine the icon based on type
+  // Détermine l'icône selon le type
   const getIcon = (): JSX.Element => {
     if (props.icon) return props.icon;
 
@@ -332,7 +332,7 @@ const Toast: Component<ToastProps> = (props) => {
     }
   };
 
-  // Get animation class based on animationType
+  // Obtient la classe d'animation selon animationType
   const getAnimationClass = (): string => {
     if (isExiting()) {
       return 'animate-fade-out';
@@ -352,10 +352,10 @@ const Toast: Component<ToastProps> = (props) => {
       class={`flex ${getBgColor()} backdrop-blur-sm shadow-lg rounded-md overflow-hidden max-w-md w-full ${getAnimationClass()}`}
       role="alert"
     >
-      {/* Special effects for certain toast types */}
+      {/* Effets spéciaux pour certains types de toast */}
       {(props.type === 'achievement' || props.type === 'levelUp') && (
         <div class="absolute inset-0 overflow-hidden pointer-events-none">
-          {/* Particles for achievement/levelUp */}
+          {/* Particules pour achievement/levelUp */}
           {Array.from({ length: 8 }).map((_, i) => (
             <div
               class={`absolute w-1 h-1 rounded-full ${props.type === 'achievement' ? 'bg-purple-400' : 'bg-blue-400'} animate-float-particle opacity-70`}
@@ -402,5 +402,4 @@ const Toast: Component<ToastProps> = (props) => {
   );
 };
 
-// Ekspor yang benar untuk SolidStart
 export { ToastProvider, useToast };

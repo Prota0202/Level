@@ -1,4 +1,3 @@
-// src/routes/api/auth/[...solidauth].ts
 import Credentials from "@auth/core/providers/credentials";
 import GitHub from "@auth/core/providers/github"
 import { SolidAuth, SolidAuthConfig } from "@auth/solid-start"

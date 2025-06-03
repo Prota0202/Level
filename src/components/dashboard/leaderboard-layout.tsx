@@ -9,7 +9,6 @@ import { LeaderboardUser } from "~/lib/types";
 import { cn } from "~/lib/utils";
 import { getRequestEvent } from "solid-js/web";
 
-// Query serveur pour récupérer le leaderboard
 export const getLeaderboardData = query(async () => {
   "use server";
 
@@ -66,9 +65,9 @@ export const getLeaderboardData = query(async () => {
     rank: index + 1,
     userName: char.user.name || '',
     characterName: char.name,
-    level: char.level.toString(),
+    level: char.level,
     class: char.class,
-    experience: char.experience.toString(),
+    experience: char.experience,
     totalCompletedQuests: char.quests.length,
   }));
 
@@ -82,9 +81,9 @@ export const getLeaderboardData = query(async () => {
       rank: rankIndex === -1 ? 99 : rankIndex + 1,
       userName: user.name || '',
       characterName: char.name,
-      level: char.level.toString(),
+      level: char.level,
       class: char.class,
-      experience: char.experience.toString(),
+      experience: char.experience,
       totalCompletedQuests: char.quests.length,
     } as LeaderboardUser
   };
@@ -96,7 +95,7 @@ const LeaderboardLayout: Component = () => {
   return (
     <Layout>
       <div class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold text-center text-blue-400 mb-8">Classement des chasseurs</h1>
+        <h1 class="text-3xl font-bold text-center text-blue-400 mb-8">Hunter rankingc</h1>
 
         <Show
           when={data()}
@@ -113,12 +112,12 @@ const LeaderboardLayout: Component = () => {
                   <table class="w-full">
                     <thead>
                       <tr class="bg-gray-700">
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-16">Rang</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Chasseur</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-24">Niveau</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-32 hidden md:table-cell">Classe</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-32">XP Total</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-32 hidden md:table-cell">Quêtes</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-16">Rank</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Hunter</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-24">Level</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-32 hidden md:table-cell">Class</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-32">Total XP</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-32 hidden md:table-cell">Quests</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-700">
@@ -151,15 +150,15 @@ const LeaderboardLayout: Component = () => {
                               <div class="font-medium text-gray-200">
                                 {player.characterName}
                                 <Show when={player.id === result().user.id}>
-                                  <span class="ml-2 text-xs bg-blue-900 text-blue-300 px-2 py-0.5 rounded">Vous</span>
+                                  <span class="ml-2 text-xs bg-blue-900 text-blue-300 px-2 py-0.5 rounded">You</span>
                                 </Show>
                                 <p class="text-xs leading-relaxed tracking-wider text-gray-400">
-                                  par {player.userName}
+                                  by {player.userName}
                                 </p>
                               </div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
-                              <div class="text-sm text-gray-300">Niv {player.level}</div>
+                              <div class="text-sm text-gray-300">Lvl {player.level}</div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap hidden md:table-cell">
                               <span class={cn(
@@ -175,11 +174,11 @@ const LeaderboardLayout: Component = () => {
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
                               <div class="text-sm font-medium text-blue-400">
-                                {parseInt(player.experience).toLocaleString()}
+                                {player.experience.toLocaleString()}
                               </div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap hidden md:table-cell">
-                              <div class="text-sm text-gray-300">{player.totalCompletedQuests} terminées</div>
+                              <div class="text-sm text-gray-300">{player.totalCompletedQuests} finished</div>
                             </td>
                           </tr>
                         )}
@@ -192,24 +191,24 @@ const LeaderboardLayout: Component = () => {
               <Show when={result().user}>
                 <div class="max-w-4xl mx-auto mt-8">
                   <div class="bg-gray-800 rounded-xl shadow-lg p-6">
-                    <h2 class="text-xl font-bold text-gray-200 mb-4">Vos statistiques</h2>
+                    <h2 class="text-xl font-bold text-gray-200 mb-4">Your statistics</h2>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div class="bg-gray-700 rounded-lg p-4">
-                        <h4 class="text-sm text-gray-400 mb-1">Rang actuel</h4>
+                        <h4 class="text-sm text-gray-400 mb-1">Current rank</h4>
                         <p class="text-2xl font-bold text-blue-400">
                           #{result().user.rank}
                         </p>
                       </div>
 
                       <div class="bg-gray-700 rounded-lg p-4">
-                        <h4 class="text-sm text-gray-400 mb-1">XP Total</h4>
+                        <h4 class="text-sm text-gray-400 mb-1">Total XP</h4>
                         <p class="text-2xl font-bold text-blue-400">
-                          {parseInt(result().user.experience).toLocaleString()}
+                          {result().user.experience.toLocaleString()}
                         </p>
                       </div>
 
                       <div class="bg-gray-700 rounded-lg p-4">
-                        <h4 class="text-sm text-gray-400 mb-1">Quêtes terminées</h4>
+                        <h4 class="text-sm text-gray-400 mb-1">Completed quests</h4>
                         <p class="text-2xl font-bold text-blue-400">
                           {result().user.totalCompletedQuests}
                         </p>

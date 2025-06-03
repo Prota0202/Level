@@ -1,4 +1,3 @@
-// src/components/auth/checking-layout.tsx
 import { useNavigate } from "@solidjs/router";
 import { createEffect, createSignal, onCleanup } from "solid-js";
 import { checkUserCharacter } from "~/lib/route-data";
@@ -25,7 +24,7 @@ export default function CheckingLayout() {
           clearInterval(interval);
           setTimeout(async () => {
             try {
-              // Utilise l'accès direct à la DB
+              
               const result = await checkUserCharacter();
               
               if (result.hasCharacter) {

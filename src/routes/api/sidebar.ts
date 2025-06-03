@@ -1,4 +1,3 @@
-// src/routes/api/character/[userId]/+server.ts
 import { getSession } from "@auth/solid-start";
 import { APIEvent } from "node_modules/@solidjs/start/dist/server";
 import { json } from "@solidjs/router";

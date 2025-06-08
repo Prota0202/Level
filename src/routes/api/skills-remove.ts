@@ -1,4 +1,3 @@
-// src/routes/api/skills-remove.ts - Nouveau fichier
 import { json } from "@solidjs/router";
 import { APIEvent } from "@solidjs/start/server";
 import db from "~/lib/db";

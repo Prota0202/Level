@@ -1,4 +1,3 @@
-// src/routes/api/dashboard.ts
 import { APIEvent } from "node_modules/@solidjs/start/dist/server";
 import { json } from "@solidjs/router";
 import db from "~/lib/db";

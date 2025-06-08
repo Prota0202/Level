@@ -1,4 +1,3 @@
-// src/routes/api/skills.ts - Remplacez tout le contenu
 import { json } from "@solidjs/router";
 import { APIEvent } from "@solidjs/start/server";
 import db from "~/lib/db";

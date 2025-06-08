@@ -1,4 +1,3 @@
-// src/routes/api/auth/login.ts (remplacer le contenu existant)
 import { json } from "@solidjs/router";
 import { APIEvent } from "@solidjs/start/server";
 import bcrypt from "bcryptjs";
@@ -44,7 +43,7 @@ export async function POST({ request }: APIEvent) {
   }
 }
 
-// Ajoute cette fonction GET pour forcer la reconnaissance de la route
+// Fonction GET pour forcer la reconnaissance de la route
 export async function GET() {
   return json({ error: "Method not allowed. Use POST." }, { status: 405 });
 }

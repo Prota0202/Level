@@ -1,4 +1,3 @@
-// src/lib/jwt-auth.ts
 import jwt from "jsonwebtoken";
 import db from "./db";
 

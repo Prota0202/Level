@@ -1,4 +1,3 @@
-// src/routes/api/character/create.ts
 import { json } from "@solidjs/router";
 import { APIEvent } from "@solidjs/start/server";
 import db from "~/lib/db";
@@ -13,7 +12,7 @@ export async function POST({ request }: APIEvent) {
     const user = await authenticateRequest(request);
     console.log('✅ User authenticated:', user.email);
 
-    // Vérifier que l'utilisateur n'a pas déjà un personnage
+    // Vérifie que l'utilisateur n'a pas déjà un personnage
     const existingCharacter = await db.character.findUnique({
       where: { userId: user.id }
     });
@@ -45,7 +44,7 @@ export async function POST({ request }: APIEvent) {
       return json({ error: errorMessages }, { status: 400 });
     }
 
-    // Vérifier que les points d'attributs sont valides (total = 20, minimum 5 chacun)
+    // Vérifie que les points d'attributs sont valides (total = 20, minimum 5 chacun)
     const totalPoints = parsed.data.strength + parsed.data.intelligence + parsed.data.endurance;
     if (totalPoints !== 20) {
       console.log('❌ Invalid attribute distribution');
